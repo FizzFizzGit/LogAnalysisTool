@@ -207,3 +207,5 @@ function Convert-FF14LogRecords ([byte[]]$rawBytes) {
 
 Export-ModuleMember -Function Convert-FF14LogRecords
 
+
+
