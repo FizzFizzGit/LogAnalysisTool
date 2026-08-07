@@ -1,4 +1,4 @@
-# FF14ログ解析・デコードモジュール
+﻿# FF14ログ解析・デコードモジュール
 #
 # 想定しているデータ構造:
 #   [Unixタイムスタンプ: 4byte LE] [種別: 4byte LE整数] [色コード: 0x1Fが1個以上] [本文...]
@@ -82,7 +82,7 @@ function Find-RecordBoundaries ([byte[]]$rawBytes) {
 # --- 変換後テキスト中の 0x1F を目印に、その前後が完全一致する重複を取り除く。
 #     一致すれば手前のコピーと0x1Fごと削り、一致しなければ区切りとしてスペースに変える。
 #     (Remove-LeadingNameEcho・Remove-LeadingTextEchoを統合したもの。
-#      本物の0x1Fだけを基準にするので、"Non Nonon"のような自然な空白を
+#      本物の0x1Fだけを基準にするので、"姓 名"のような自然な空白を
 #      誤って重複と判定する心配が無い)
 function Remove-DuplicateAroundBoundary ([string]$text) {
   while ($true) {
@@ -206,3 +206,4 @@ function Convert-FF14LogRecords ([byte[]]$rawBytes) {
 }
 
 Export-ModuleMember -Function Convert-FF14LogRecords
+

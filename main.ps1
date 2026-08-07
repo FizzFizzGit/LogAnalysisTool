@@ -1,4 +1,4 @@
-# --- コンソールウィンドウを非表示にするWin32 API定義 ---
+﻿# --- コンソールウィンドウを非表示にするWin32 API定義 ---
 $asyncCode = @'
 [DllImport("user32.dll")]
 public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -137,13 +137,13 @@ $form.Controls.AddRange(@(
 
 # 描画イベント
 $listView.Add_RetrieveVirtualItem({
-    param($sender, $e)
-    if ($e.ItemIndex -lt $script:resultList.Count) {
-      $data = $script:resultList[$e.ItemIndex]
+    param($sourceSender, $retrieveEventArgs)
+    if ($retrieveEventArgs.ItemIndex -lt $script:resultList.Count) {
+      $data = $script:resultList[$retrieveEventArgs.ItemIndex]
       $item = New-Object System.Windows.Forms.ListViewItem([string]$data.FilePath)
       $item.SubItems.Add([string]$data.LineNo) | Out-Null
       $item.SubItems.Add([string]$data.Text) | Out-Null
-      $e.Item = $item
+      $retrieveEventArgs.Item = $item
     }
   })
 
@@ -225,10 +225,10 @@ $btnExport.Add_Click({
   })
 
 $listView.Add_KeyDown({
-    param($sender, $e)
-    if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::C) {
+    param($eventSender, $keyEventArgs)
+    if ($keyEventArgs.Control -and $keyEventArgs.KeyCode -eq [System.Windows.Forms.Keys]::C) {
       & $script:CopySelectedItems $false
-      $e.Handled = $true
+      $keyEventArgs.Handled = $true
     }
   })
 
@@ -366,3 +366,4 @@ $form.Add_FormClosed({
  })
 
 $form.ShowDialog()
+
