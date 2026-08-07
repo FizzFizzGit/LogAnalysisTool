@@ -6,4 +6,3 @@
 Format-Hex -Path ".\main.ps1" | Select-Object -First 1
 Format-Hex -Path ".\FF14LogDecoder.psm1" | Select-Object -First 1
 Format-Hex -Path ".\SearchWorker.ps1" | Select-Object -First 1
-
