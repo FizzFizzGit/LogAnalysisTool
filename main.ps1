@@ -30,7 +30,7 @@ function Resume-Drawing ($ctrl) {
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$SCRIPT_VERSION = "v1.3.3"
+$SCRIPT_VERSION = "v1.3.4"
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "ログ検索ツール $SCRIPT_VERSION (FF14 Special Edition)"
