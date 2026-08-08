@@ -1,4 +1,6 @@
-﻿param($folderPath, $keyword, $fixGarbled, $ff14Mode, $scriptDir)
+﻿# スレッドで実行される検索処理のワーカー関数
+
+param($folderPath, $keyword, $fixGarbled, $ff14Mode, $scriptDir)
 
 if ([string]::IsNullOrEmpty($scriptDir)) {
   $scriptDir = $PSScriptRoot
