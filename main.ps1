@@ -1,4 +1,7 @@
-﻿# --- コンソールウィンドウを非表示にするWin32 API定義 ---
+﻿# PowerShell GUI Log Search Tool
+# GUI等の設定はmain.ps1に記述し、検索処理はSearchWorker.ps1に記述する構成です。
+
+# --- コンソールウィンドウを非表示にするWin32 API定義 ---
 $asyncCode = @'
 [DllImport("user32.dll")]
 public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
