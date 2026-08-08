@@ -1,5 +1,4 @@
 ﻿param($folderPath, $keyword, $fixGarbled, $ff14Mode, $scriptDir)
-$OutputEncoding = [System.Text.Encoding]::UTF8
 
 if ([string]::IsNullOrEmpty($scriptDir)) {
   $scriptDir = $PSScriptRoot
