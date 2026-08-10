@@ -73,4 +73,5 @@ FF14のバイナリログ解析に最適化された、高速・軽量な多機�
 - `main.ps1`: メインGUIアプリケーション
 - `SearchWorker.ps1`: バックグラウンド高速検索ワーカー
 - `FF14LogDecoder.psm1`: バイナリ解析・デコードモジュール
+- `FF14LogDecoder_仕様書.md`: デコーダ部の仕様書
 - `README.md`: 本ドキュメント
