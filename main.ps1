@@ -30,10 +30,10 @@ function Resume-Drawing ($ctrl) {
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$SCRIPT_VERSION = "v1.3.4"
+$SCRIPT_VERSION = "v1.0.0"
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "ログ検索ツール $SCRIPT_VERSION (FF14 Special Edition)"
+$form.Text = "LogAnalysisTool $SCRIPT_VERSION (FF14 Special Edition)"
 $form.Size = New-Object System.Drawing.Size(1000, 600)
 $form.StartPosition = "CenterScreen"
 $form.MinimumSize = New-Object System.Drawing.Size(600, 400)
@@ -112,9 +112,9 @@ $doubleBufferProp = [System.Windows.Forms.Control].GetProperty("DoubleBuffered",
 $doubleBufferProp.SetValue($listView, $true, $null)
 
 # カラム構成 (3つ)
-$listView.Columns.Add("ファイル", 150) | Out-Null
-$listView.Columns.Add("行番号", 80) | Out-Null
-$listView.Columns.Add("内容", 710) | Out-Null
+$listView.Columns.Add("ファイル", 80) | Out-Null
+$listView.Columns.Add("行番号", 50) | Out-Null
+$listView.Columns.Add("内容", 1800) | Out-Null
 
 # --- 下部 HEX インスペクターパネル ---
 $lblHexTitle = New-Object System.Windows.Forms.Label
@@ -139,6 +139,8 @@ $form.Controls.AddRange(@(
   ))
 
 # 描画イベント
+$colorEven = [System.Drawing.Color]::White
+$colorOdd = [System.Drawing.Color]::FromArgb(240, 244, 248)
 $listView.Add_RetrieveVirtualItem({
     param($sourceSender, $retrieveEventArgs)
     if ($retrieveEventArgs.ItemIndex -lt $script:resultList.Count) {
@@ -146,6 +148,7 @@ $listView.Add_RetrieveVirtualItem({
       $item = New-Object System.Windows.Forms.ListViewItem([string]$data.FilePath)
       $item.SubItems.Add([string]$data.LineNo) | Out-Null
       $item.SubItems.Add([string]$data.Text) | Out-Null
+      $item.BackColor = if ($retrieveEventArgs.ItemIndex % 2 -eq 0) { $colorEven } else { $colorOdd }
       $retrieveEventArgs.Item = $item
     }
   })
@@ -209,7 +212,9 @@ $btnExport.Add_Click({
     if ($saveDlg.ShowDialog() -eq "OK") {
       try {
         if ($saveDlg.FileName.EndsWith(".csv")) {
-          $script:resultList | Export-Csv -Path $saveDlg.FileName -Encoding UTF8 -NoTypeInformation
+          $script:resultList |
+            Select-Object FilePath, LineNo, Text, Hex |
+            Export-Csv -Path $saveDlg.FileName -Encoding UTF8 -NoTypeInformation
         }
         else {
           $sb = New-Object System.Text.StringBuilder
@@ -369,6 +374,3 @@ $form.Add_FormClosed({
  })
 
 $form.ShowDialog()
-
-
-
