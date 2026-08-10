@@ -20,7 +20,7 @@ FF14のバイナリログ解析に最適化された、高速・軽量な多機�
 
 - **.ps1ファイルの仕様**: Powershell 5対応
 - **同梱起動バッチ**: `run.bat`
-- **実行形式を添付**: `LogAnalysisTool.exe`ファイル
+- **実行形式を添付**: `LogAnalysisTool.exe`
 
 ---
 
