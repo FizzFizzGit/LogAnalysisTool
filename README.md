@@ -19,8 +19,8 @@ FF14のバイナリログ解析に最適化された、高速・軽量な多機�
 ### ⚒️ 配布 & 実行方法
 
 - **.ps1ファイルの仕様**: Powershell 5対応
-- **同梱起動バッチ**: run.bat
-- **実行形式を添付**: exeファイル
+- **同梱起動バッチ**: `run.bat`
+- **実行形式を添付**: `LogAnalysisTool.exe`ファイル
 
 ---
 
@@ -32,10 +32,10 @@ FF14のバイナリログ解析に最適化された、高速・軽量な多機�
 ---
 
 1. ### exe起動
-- ダウンロードしたLogAnalysisTool.exeをダブルクリックして起動します。
+- ダウンロードした`LogAnalysisTool.exe`をダブルクリックして起動します。
 
 2. ### run.bat起動
-- LogAnalysisTool.zipを解凍して、同じフォルダ内に置いたrun.batをダブルクリック。
+- `LogAnalysisTool.zip`を解凍して、同じフォルダ内に置いたrun.batをダブルクリック。
 
 3. ### powershellから直接起動
 - LogAnalysisTool.zipを解凍して、powershellターミナルから直接起動する。
