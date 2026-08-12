@@ -16,7 +16,13 @@ $script:UpdateVirtualListSize = {
     return
   }
 
-  $listView.VirtualListSize = $currentCount
+  Suspend-Drawing $listView
+  try {
+    $listView.VirtualListSize = $currentCount
+  }
+  finally {
+    Resume-Drawing $listView
+  }
 }
 
 # 描画イベント
@@ -24,15 +30,62 @@ $script:UpdateVirtualListSize = {
 $colorEven = [System.Drawing.Color]::White
 $colorOdd = [System.Drawing.Color]::FromArgb(240, 244, 248)
 
+function New-ListViewRowItem ($idx) {
+  $data = $script:resultList[$idx]
+  $item = New-Object System.Windows.Forms.ListViewItem([string]$data.FilePath)
+  $item.SubItems.Add([string]$data.LineNo) | Out-Null
+  $item.SubItems.Add([string]$data.Text) | Out-Null
+  $item.BackColor = if ($idx % 2 -eq 0) { $colorEven } else { $colorOdd }
+  return $item
+}
+
+# --- 表示範囲をまとめて事前構築するキャッシュ ---
+#     大量件数(数十万行)をスクロールすると、1行ごとにRetrieveVirtualItemで
+#     ListViewItemを作り直すPowerShellスクリプトブロックの呼び出しコストが積み重なり、
+#     体感できるレベルのカクつき・ちらつきになる。
+#     ListViewが「これから表示する範囲」を事前に教えてくれるCacheVirtualItemsで、
+#     その範囲をまとめて1回だけ作っておき、RetrieveVirtualItemは配列参照だけにする。
+$script:itemCache = $null
+$script:cacheStartIndex = -1
+
+$listView.Add_CacheVirtualItems({
+    param($sourceSender, $cacheEventArgs)
+
+    # 既にキャッシュ範囲が要求範囲を包含していれば作り直さない
+    if ($null -ne $script:itemCache -and
+      $script:cacheStartIndex -le $cacheEventArgs.StartIndex -and
+      ($script:cacheStartIndex + $script:itemCache.Length - 1) -ge $cacheEventArgs.EndIndex) {
+      return
+    }
+
+    $script:cacheStartIndex = $cacheEventArgs.StartIndex
+    $length = $cacheEventArgs.EndIndex - $cacheEventArgs.StartIndex + 1
+    $script:itemCache = [System.Windows.Forms.ListViewItem[]]::new($length)
+
+    for ($k = 0; $k -lt $length; $k++) {
+      $idx = $cacheEventArgs.StartIndex + $k
+      if ($idx -lt $script:resultList.Count) {
+        $script:itemCache[$k] = New-ListViewRowItem $idx
+      }
+    }
+  })
+
 $listView.Add_RetrieveVirtualItem({
     param($sourceSender, $retrieveEventArgs)
+
+    if ($null -ne $script:itemCache -and
+      $retrieveEventArgs.ItemIndex -ge $script:cacheStartIndex -and
+      $retrieveEventArgs.ItemIndex -lt ($script:cacheStartIndex + $script:itemCache.Length)) {
+      $cached = $script:itemCache[$retrieveEventArgs.ItemIndex - $script:cacheStartIndex]
+      if ($null -ne $cached) {
+        $retrieveEventArgs.Item = $cached
+        return
+      }
+    }
+
+    # キャッシュ範囲外からの要求(単発クリック等)は、その場で1件だけ作るフォールバック
     if ($retrieveEventArgs.ItemIndex -lt $script:resultList.Count) {
-      $data = $script:resultList[$retrieveEventArgs.ItemIndex]
-      $item = New-Object System.Windows.Forms.ListViewItem([string]$data.FilePath)
-      $item.SubItems.Add([string]$data.LineNo) | Out-Null
-      $item.SubItems.Add([string]$data.Text) | Out-Null
-      $item.BackColor = if ($retrieveEventArgs.ItemIndex % 2 -eq 0) { $colorEven } else { $colorOdd }
-      $retrieveEventArgs.Item = $item
+      $retrieveEventArgs.Item = New-ListViewRowItem $retrieveEventArgs.ItemIndex
     }
   })
 
@@ -153,6 +206,9 @@ $btnReset.Add_Click({
     Stop-Search
     $script:resultQueue = [System.Collections.Concurrent.ConcurrentQueue[PSObject]]::new()
     $script:resultList.Clear()
+    $script:lastTopItemIndex = -1
+    $script:itemCache = $null
+    $script:cacheStartIndex = -1
     $listView.VirtualListSize = 0
     $lblStatus.Text = "リセットしました ($SCRIPT_VERSION)"
   })
@@ -207,7 +263,7 @@ $btnSearch.Add_Click({
     # Timerで確認して、実際にスクロールされたときだけ
     # 最新のVirtualListSizeを反映する。
     $script:timer = New-Object System.Windows.Forms.Timer
-    $script:timer.Interval = 50
+    $script:timer.Interval = 500
     $script:searchState = "Searching"
     $btnSearch.Text = "一時中断"
     $lblStatus.Text = "ログファイルバッファ中…"
@@ -245,7 +301,13 @@ $btnSearch.Add_Click({
               )
 
               if ($newSize -ne $listView.VirtualListSize) {
-                $listView.VirtualListSize = $newSize
+                Suspend-Drawing $listView
+                try {
+                  $listView.VirtualListSize = $newSize
+                }
+                finally {
+                  Resume-Drawing $listView
+                }
               }
             }
             $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット)" # 件数表示だけは検索結果の取り込みに合わせて更新する。
@@ -257,7 +319,22 @@ $btnSearch.Add_Click({
             if ($script:lastTopItemIndex -ne $topIndex) {
               $script:lastTopItemIndex = $topIndex
 
-              if ($listView.VirtualListSize -ne $script:resultList.Count) {
+              # 上に手繰った場合は既にロード済みの範囲を見ているだけなので同期不要。
+              # 下に手繰った場合も、見えている範囲がまだVirtualListSizeの内側なら不要。
+              # 「これから見ようとしている範囲がロード済みを超える」時だけ同期する。
+              $itemHeight = 20
+              try {
+                if ($listView.VirtualListSize -gt 0) {
+                  $itemHeight = [Math]::Max(1, $listView.GetItemRect(0).Height)
+                }
+              }
+              catch {
+                $itemHeight = 20
+              }
+              $visibleRows = [Math]::Max(1, [Math]::Ceiling($listView.ClientSize.Height / $itemHeight))
+              $lastVisibleIndex = $topIndex + $visibleRows
+
+              if ($lastVisibleIndex -ge $listView.VirtualListSize -and $listView.VirtualListSize -lt $script:resultList.Count) {
                 & $script:UpdateVirtualListSize
               }
             }

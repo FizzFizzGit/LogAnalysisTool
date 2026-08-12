@@ -16,9 +16,26 @@
 # 1. 補助関数
 # ==========================================
 
-# --- 03終端(ETX)を探索し、進んだ位置を返す ---
-function Find-EtxTerminal ([byte[]]$rawBytes, [int]$currentIndex, [int]$len) {
-  $idx = $currentIndex
+# --- タグ(0x02 <type> <len> ...)の終端位置を探す。
+#     SeStringのタグは「長さバイトの分だけ中身が続き、最後の1バイトが0x03」という
+#     構造になっている。中身のデータには0x03という値のバイトが混ざることがあるため、
+#     素朴に「次の0x03を探す」と、そこで誤って打ち切ってしまう(実際に発生したバグ)。
+#     長さバイトを使って終端位置を直接計算し、そこが本当に0x03かどうかで検証する。
+#     長さが0xF0以上(複数バイト長のパックド整数)の場合や、検証に失敗した場合は
+#     従来通り素朴に0x03を探すフォールバックにする。
+function Find-EtxTerminal ([byte[]]$rawBytes, [int]$tagStart, [int]$len) {
+  if ($tagStart + 2 -lt $len) {
+    $declaredLen = $rawBytes[$tagStart + 2]
+    if ($declaredLen -lt 0xF0) {
+      $tagEnd = $tagStart + 2 + $declaredLen
+      if ($tagEnd -lt $len -and $rawBytes[$tagEnd] -eq 0x03) {
+        return $tagEnd
+      }
+    }
+  }
+
+  # フォールバック: 素朴に次の0x03を探す
+  $idx = $tagStart + 1
   while ($idx -lt $len -and $rawBytes[$idx] -ne 0x03) {
     $idx++
   }
@@ -65,7 +82,7 @@ function Find-RecordBoundaries ([byte[]]$rawBytes) {
     # 0x02...0x03 タグの中身は境界候補から除外する
     # (タグの中の数値がたまたまタイムスタンプらしく見えて誤検出するのを防ぐため)
     if ($rawBytes[$i] -eq 0x02) {
-      $i = (Find-EtxTerminal $rawBytes ($i + 1) $len) + 1
+      $i = (Find-EtxTerminal $rawBytes $i $len) + 1
       continue
     }
 
@@ -113,7 +130,7 @@ function Convert-FF14TagBytes ([byte[]]$rawBytes) {
 
     if ($b -eq 0x02) {
       $start = $i
-      $etx = Find-EtxTerminal $rawBytes ($i + 1) $len
+      $etx = Find-EtxTerminal $rawBytes $start $len
 
       if ($etx -ge $len) {
         # 閉じる0x03が見つからなかった場合、タグとして解釈せずそのまま出力する
