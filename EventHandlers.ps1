@@ -343,7 +343,6 @@ $btnSearch.Add_Click({
           if ($script:asyncResult.IsCompleted -and $script:resultQueue.IsEmpty) {
             # 検索完了時は待ち時間を設けず、最後に追加された結果まで
             # 必ずListViewへ反映する。
-            #
             # これにより、検索完了時にVirtualListSizeだけ古いまま残ることを防ぐ。
             # 検索終了時はユーザー操作を待たず、最後の結果まで即時反映する。
             & $script:UpdateVirtualListSize
