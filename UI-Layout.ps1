@@ -1,7 +1,7 @@
 ﻿# UIレイアウト: フォームと各コントロールの生成のみ。イベント配線は EventHandlers.ps1 側で行う。
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "ログ検索ツール $SCRIPT_VERSION (FF14 Special Edition)"
+$form.Text = "LogAnalysisTool $SCRIPT_VERSION (FF14 Special Edition)"
 $form.Size = New-Object System.Drawing.Size(1000, 600)
 $form.StartPosition = "CenterScreen"
 $form.MinimumSize = New-Object System.Drawing.Size(600, 400)

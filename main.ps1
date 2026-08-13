@@ -12,7 +12,7 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$SCRIPT_VERSION = "v1.0.1"
+$SCRIPT_VERSION = "v1.0.2"
 
 # --- 検索の状態を保持するスクリプトスコープ変数 ---
 $script:psInstance = $null
@@ -34,6 +34,10 @@ $script:lastTopItemIndex = -1
 # 検索開始直後はスクロールイベントが発生するとは限らない。
 # そのため、最初の一定件数までは先行してListViewへ公開する。
 $script:initialVirtualListSize = 1000
+
+# 処理時間表示用。一時中断中はカウントを止めるため、
+# StartNew()ではなくStart()/Stop()で明示的に制御する。
+$script:searchStopwatch = [System.Diagnostics.Stopwatch]::new()
 
 . (Join-Path $PSScriptRoot "Win32Helpers.ps1")
 . (Join-Path $PSScriptRoot "UI-Layout.ps1")

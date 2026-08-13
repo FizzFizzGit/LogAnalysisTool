@@ -2,7 +2,7 @@
 # UI-Layout.ps1で作られたコントロール群(と main.ps1 の $script:resultList 等)を前提にする。
 
 # ListViewへ最新の検索結果件数を反映する処理。
-#
+
 # 検索中はresultListの件数が増えても、ここを自動的には呼ばない。
 # VirtualModeではVirtualListSizeの変更がListViewの再取得・再描画を
 # 発生させるため、ユーザーがスクロールしたときなど、表示内容を
@@ -218,16 +218,20 @@ $btnSearch.Add_Click({
     if ($script:searchState -eq "Searching") {
       $script:searchState = "Paused"
       $script:pauseEvent.Reset() | Out-Null
+      $script:searchStopwatch.Stop()
       $btnSearch.Text = "再開"
-      $lblStatus.Text = "一時中断中... ($($script:resultList.Count) 件表示中)"
+      $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
+      $lblStatus.Text = "一時中断中... ($($script:resultList.Count) 件表示中, ${elapsed}秒)"
       return
     }
 
     if ($script:searchState -eq "Paused") {
       $script:searchState = "Searching"
       $script:pauseEvent.Set() | Out-Null
+      $script:searchStopwatch.Start()
       $btnSearch.Text = "一時中断"
-      $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット)"
+      $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
+      $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒)"
       return
     }
 
@@ -254,14 +258,13 @@ $btnSearch.Add_Click({
 
     $script:psInstance.AddScript((Get-Content -Raw $workerScriptPath)).AddArgument($folder).AddArgument($txtKeyword.Text).AddArgument($chkFixGarbled.Checked).AddArgument($chkFF14Mode.Checked).AddArgument($PSScriptRoot) | Out-Null
 
+    $script:searchStopwatch.Restart()
     $script:asyncResult = $script:psInstance.BeginInvoke()
 
-    # 検索結果が増えるたびに画面を再描画することを防ぐ。
-    # 最初の1000件程度は先行してListViewへ公開する。
-    # ユーザーがスクロールできず、スクロール位置の変化自体を検出できなくなるため。
-    # ListViewにはScrollイベントがないため、現在の先頭行を
-    # Timerで確認して、実際にスクロールされたときだけ
-    # 最新のVirtualListSizeを反映する。
+    # 検索結果が増えるたびに画面を再描画することを防ぐが、
+    # ListViewにはScrollイベントが無くスクロール位置の変化自体が検出出来ないので
+    # 最初の1000件程度は先行してListViewへ公開する
+    # 現在の先頭行をTimer間隔で確認して、実際にスクロールされたときだけ最新のVirtualListSizeを反映する。
     $script:timer = New-Object System.Windows.Forms.Timer
     $script:timer.Interval = 500
     $script:searchState = "Searching"
@@ -283,8 +286,7 @@ $btnSearch.Add_Click({
           $itemObj = $null
 
           # TopItem.Indexが変化しない限りVirtualListSizeには触れないので、
-          # 検索結果が増え続けていても、ユーザーが何もしていない間は
-          # ListViewの再描画を発生させない。
+          # 検索結果が増え続けていても、ユーザーが何もしていない間はListViewの再描画を発生させない。
           while ($script:resultQueue.TryDequeue([ref]$itemObj)) {
             if ($null -ne $itemObj) {
               $script:resultList.Add($itemObj)
@@ -310,7 +312,8 @@ $btnSearch.Add_Click({
                 }
               }
             }
-            $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット)" # 件数表示だけは検索結果の取り込みに合わせて更新する。
+            $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
+            $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒)" # 件数表示だけは検索結果の取り込みに合わせて更新する。
           }
 
           if ($listView.Items.Count -gt 0 -and $listView.TopItem) {
@@ -341,13 +344,14 @@ $btnSearch.Add_Click({
           }
 
           if ($script:asyncResult.IsCompleted -and $script:resultQueue.IsEmpty) {
-            # 検索完了時は待ち時間を設けず、最後に追加された結果まで
-            # 必ずListViewへ反映する。
+            # 検索完了時は待ち時間を設けず、最後に追加された結果まで必ずListViewへ反映する。
             # これにより、検索完了時にVirtualListSizeだけ古いまま残ることを防ぐ。
             # 検索終了時はユーザー操作を待たず、最後の結果まで即時反映する。
             & $script:UpdateVirtualListSize
 
-            $lblStatus.Text = "検索完了 (合計: $($script:resultList.Count) 件ヒット) - $SCRIPT_VERSION"
+            $script:searchStopwatch.Stop()
+            $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
+            $lblStatus.Text = "検索完了 (合計: $($script:resultList.Count) 件ヒット, ${elapsed}秒) - $SCRIPT_VERSION"
             Stop-Search
           }
         }
