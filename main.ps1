@@ -18,6 +18,7 @@ $SCRIPT_VERSION = "v1.0.2"
 $script:psInstance = $null
 $script:asyncResult = $null
 $script:timer = $null
+$script:displayTimer = $null
 $script:resultQueue = [System.Collections.Concurrent.ConcurrentQueue[PSObject]]::new()
 $script:resultList = [System.Collections.Generic.List[PSObject]]::new()
 $script:isUpdatingUI = $false

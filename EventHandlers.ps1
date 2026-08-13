@@ -221,7 +221,7 @@ $btnSearch.Add_Click({
       $script:searchStopwatch.Stop()
       $btnSearch.Text = "再開"
       $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
-      $lblStatus.Text = "一時中断中... ($($script:resultList.Count) 件表示中, ${elapsed}秒)"
+      $lblStatus.Text = "一時中断中... ($($script:resultList.Count) 件表示中, ${elapsed}秒) - $SCRIPT_VERSION"
       return
     }
 
@@ -231,7 +231,7 @@ $btnSearch.Add_Click({
       $script:searchStopwatch.Start()
       $btnSearch.Text = "一時中断"
       $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
-      $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒)"
+      $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒) - $SCRIPT_VERSION"
       return
     }
 
@@ -260,6 +260,21 @@ $btnSearch.Add_Click({
 
     $script:searchStopwatch.Restart()
     $script:asyncResult = $script:psInstance.BeginInvoke()
+
+    # 経過時間の表示専用タイマー。
+    # ラベルのテキストを書き換えるだけで負荷はごく軽いので、
+    # 結果取り込み用タイマー(500ms)より短い間隔で独立して回す。
+    # 検索中のときだけ表示を更新し、一時中断中・完了時は
+    # ボタン側のハンドラが直接セットした表示を上書きしない。
+    $script:displayTimer = New-Object System.Windows.Forms.Timer
+    $script:displayTimer.Interval = 100
+    $script:displayTimer.Add_Tick({
+        if ($script:searchState -eq "Searching") {
+          $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
+          $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒) - $SCRIPT_VERSION"
+        }
+      })
+    $script:displayTimer.Start()
 
     # 検索結果が増えるたびに画面を再描画することを防ぐが、
     # ListViewにはScrollイベントが無くスクロール位置の変化自体が検出出来ないので
@@ -295,7 +310,6 @@ $btnSearch.Add_Click({
           }
 
           if ($addedCount -gt 0) {
-
             if ($listView.VirtualListSize -lt $script:initialVirtualListSize) {
               $newSize = [Math]::Min(
                 $script:initialVirtualListSize,
@@ -312,8 +326,6 @@ $btnSearch.Add_Click({
                 }
               }
             }
-            $elapsed = $script:searchStopwatch.Elapsed.TotalSeconds.ToString("F1")
-            $lblStatus.Text = "検索中... ($($script:resultList.Count) 件ヒット, ${elapsed}秒)" # 件数表示だけは検索結果の取り込みに合わせて更新する。
           }
 
           if ($listView.Items.Count -gt 0 -and $listView.TopItem) {
