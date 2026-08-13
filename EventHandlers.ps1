@@ -266,7 +266,7 @@ $btnSearch.Add_Click({
     # 最初の1000件程度は先行してListViewへ公開する
     # 現在の先頭行をTimer間隔で確認して、実際にスクロールされたときだけ最新のVirtualListSizeを反映する。
     $script:timer = New-Object System.Windows.Forms.Timer
-    $script:timer.Interval = 100
+    $script:timer.Interval = 500
     $script:searchState = "Searching"
     $btnSearch.Text = "一時中断"
     $lblStatus.Text = "ログファイルバッファ中…"
